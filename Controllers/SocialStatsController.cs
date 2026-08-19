@@ -10,17 +10,21 @@ namespace PersonaStatsApi.Controllers;
 public class SocialStatsController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly ILogger<SocialStatsController> _logger;
 
-    public SocialStatsController(AppDbContext context)
+    public SocialStatsController(AppDbContext context, ILogger<SocialStatsController> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     // GET /api/socialstats
     [HttpGet]
     public async Task<ActionResult<IEnumerable<SocialStats>>> GetAll()
     {
-        return Ok(await _context.SocialStats.AsNoTracking().ToListAsync());
+        var stats = await _context.SocialStats.AsNoTracking().ToListAsync();
+        _logger.LogInformation("Consulta de estadísticas: {Count} registros devueltos", stats.Count);
+        return Ok(stats);
     }
 
     // GET /api/socialstats/3
@@ -28,7 +32,12 @@ public class SocialStatsController : ControllerBase
     public async Task<ActionResult<SocialStats>> GetById(int id)
     {
         var stat = await _context.SocialStats.FindAsync(id);
-        return stat is null ? NotFound() : Ok(stat);
+        if (stat is null)
+        {
+            _logger.LogWarning("Estadística con id {Id} no encontrada", id);
+            return NotFound();
+        }
+        return Ok(stat);
     }
 
     // POST /api/socialstats
@@ -37,6 +46,7 @@ public class SocialStatsController : ControllerBase
     {
         _context.SocialStats.Add(stat);
         await _context.SaveChangesAsync();
+        _logger.LogInformation("Estadística creada: id {Id}, name {Name}, level {Level}", stat.Id, stat.Name, stat.Level);
         return CreatedAtAction(nameof(GetById), new { id = stat.Id }, stat);
     }
 
@@ -44,16 +54,25 @@ public class SocialStatsController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, SocialStats stat)
     {
-        if (id != stat.Id) return BadRequest("El id de la URL no coincide con el del body");
+        if (id != stat.Id)
+        {
+            _logger.LogWarning("Update fallido: id de URL {UrlId} no coincide con id del body {BodyId}", id, stat.Id);
+            return BadRequest("El id de la URL no coincide con el del body");
+        }
 
         var existing = await _context.SocialStats.FindAsync(id);
-        if (existing is null) return NotFound();
+        if (existing is null)
+        {
+            _logger.LogWarning("Update fallido: estadística con id {Id} no encontrada", id);
+            return NotFound();
+        }
 
         existing.Name = stat.Name;
         existing.Level = stat.Level;
         existing.Points = stat.Points;
 
         await _context.SaveChangesAsync();
+        _logger.LogInformation("Estadística actualizada: id {Id}, name {Name}, level {Level}", id, stat.Name, stat.Level);
         return NoContent();
     }
 
@@ -62,10 +81,15 @@ public class SocialStatsController : ControllerBase
     public async Task<IActionResult> Delete(int id)
     {
         var stat = await _context.SocialStats.FindAsync(id);
-        if (stat is null) return NotFound();
+        if (stat is null)
+        {
+            _logger.LogWarning("Delete fallido: estadística con id {Id} no encontrada", id);
+            return NotFound();
+        }
 
         _context.SocialStats.Remove(stat);
         await _context.SaveChangesAsync();
+        _logger.LogInformation("Estadística eliminada: id {Id}, name {Name}", id, stat.Name);
         return NoContent();
     }
 }

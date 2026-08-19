@@ -7,6 +7,9 @@ REST API construida con .NET 10 para gestionar las estadísticas sociales inspir
 [![EF Core](https://img.shields.io/badge/EF%20Core-10.0-green.svg)]()
 [![SQLite](https://img.shields.io/badge/SQLite-3-red.svg)]()
 [![Swagger](https://img.shields.io/badge/Swagger-UI-orange.svg)]()
+[![Serilog](https://img.shields.io/badge/Serilog-10.0-333333.svg)]()
+[![Health Checks](https://img.shields.io/badge/Health%20Checks-10.0-red.svg)]()
+[![xUnit](https://img.shields.io/badge/xUnit-2.9-green.svg)]()
 
 ## 🎯 Sobre el proyecto
 
@@ -20,6 +23,9 @@ El sistema maneja las 5 estadísticas sociales clásicas del juego: **Conocimien
 - [EF Core 10](https://learn.microsoft.com/ef/core/) + SQLite
 - Swagger / Swashbuckle (UI interactiva de documentación)
 - C# con controladores clásicos
+- Serilog (logging estructurado en consola y archivo)
+- Health Checks (monitoreo de la API y su conexión a la BD)
+- xUnit + `WebApplicationFactory` (pruebas de integración)
 
 ## ✅ Requisitos previos
 
@@ -52,6 +58,14 @@ La API queda disponible en:
 
 > El puerto puede variar según `Properties/launchSettings.json`.
 
+## 🧪 Cómo ejecutar los tests
+
+```powershell
+dotnet test
+```
+
+La solución incluye un proyecto de **pruebas de integración** (xUnit) que levanta la API en memoria con una base SQLite temporal y verifica todos los endpoints contra una base real, sin depender de la base de desarrollo.
+
 ## 📡 Endpoints
 
 | Método | Ruta | Descripción | Códigos de respuesta |
@@ -61,6 +75,7 @@ La API queda disponible en:
 | POST | `/api/socialstats` | Crea una nueva estadística | 201 Created |
 | PUT | `/api/socialstats/{id}` | Actualiza una estadística existente | 204 No Content, 400 Bad Request, 404 Not Found |
 | DELETE | `/api/socialstats/{id}` | Elimina una estadística | 204 No Content, 404 Not Found |
+| GET | `/health` | Verifica la salud de la API y la conexión a la BD | 200 OK, 503 Service Unavailable |
 
 ### 📦 Ejemplo de payload
 
@@ -75,6 +90,7 @@ La API queda disponible en:
 ## 🗂️ Estructura del proyecto
 
 ```
+PersonaStatsApi.sln                 # Solución
 PersonaStatsApi/
 ├── Controllers/
 │   └── SocialStatsController.cs   # Endpoints CRUD
@@ -85,6 +101,9 @@ PersonaStatsApi/
 ├── Migrations/                    # Migraciones de EF Core
 ├── Program.cs                     # Configuración de la aplicación
 └── appsettings.json               # Connection string de SQLite
+PersonaStatsApi.Tests/
+├── SocialStatsApiFactory.cs       # Factory con BD SQLite temporal de pruebas
+└── SocialStatsApiTests.cs         # Pruebas de integración de los endpoints
 ```
 
 ## 💡 Decisiones técnicas
@@ -137,6 +156,26 @@ Documentación interactiva del API: permite probar todos los endpoints desde el 
 ### ⚙️ Configuración externa (appsettings.json)
 
 La connection string vive en `appsettings.json`, no en el código: así la misma aplicación puede apuntar a diferentes bases según el ambiente (dev, staging, producción) sin recompilar.
+
+### 🩺 Health Checks (`/health`)
+
+La API expone un endpoint de salud que verifica la disponibilidad de la aplicación y la conexión a la base de datos (`AddDbContextCheck`). Es la pieza que permitiría conectar la API a herramientas de monitoreo (uptime, alertas, load balancers) o a la lógica de orquestación en la nube — un requisito habitual en operaciones, donde un servicio "vivo" no siempre es un servicio "sano".
+
+### 🪵 Serilog (logging estructurado)
+
+- Reemplaza el logging por defecto con **Serilog**, que escribe en consola y en archivos diarios (`logs/personastats-*.log`) con formato JSON.
+- Cada operación del CRUD queda registrada con su nivel correcto (`Information` para éxito, `Warning` para 404 o IDs inconsistentes).
+- En operaciones, tener bitácoras estructuradas es lo que permite reconstruir incidentes y responder ante fallas con evidencia, no con suposiciones.
+
+### 🧪 Pruebas de integración (xUnit + WebApplicationFactory)
+
+- La API se levanta en memoria durante las pruebas (`WebApplicationFactory<Program>`), con una **base SQLite temporal** que se crea, se siembra con el seed y se elimina al terminar — la suite nunca toca la base de desarrollo.
+- 11 pruebas cubren todo el CRUD (éxitos, 404, 400 por validación y por ID inconsistente) y el endpoint `/health`.
+- El hábito de probar el software antes de liberarlo es el mismo que se aplica en operaciones antes de un pase a producción: validar, no asumir.
+
+### 📁 Solución (.sln)
+
+Organicé el código en una **solución** con dos proyectos: la API y su suite de tests. Permite ejecutar `dotnet test` desde la raíz y deja la estructura lista para crecer (agregar proyectos, herramientas de análisis, etc.).
 
 ## 🧪 Aspectos a mejorar
 

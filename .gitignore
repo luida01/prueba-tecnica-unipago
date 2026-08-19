@@ -486,3 +486,6 @@ $RECYCLE.BIN/
 *.db-journal
 *.sqlite
 *.sqlite3
+
+# Logs
+logs/
