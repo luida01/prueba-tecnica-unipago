@@ -11,6 +11,16 @@ REST API construida con .NET 10 para gestionar las estadísticas sociales inspir
 [![Health Checks](https://img.shields.io/badge/Health%20Checks-10.0-red.svg)]()
 [![xUnit](https://img.shields.io/badge/xUnit-2.9-green.svg)]()
 
+## ✨ Adicionales incluidos
+
+La prueba técnica pedía una API REST con CRUD y persistencia en base de datos. Más allá de ese requisito, agregué tres componentes pensando en el día a día de un rol de operaciones, donde una aplicación no termina cuando compila:
+
+- **🩺 Health Checks** — un endpoint (`/health`) que verifica que la API responda *y* que su conexión a la base de datos esté sana. En operaciones, un servicio "vivo" no es lo mismo que un servicio "sano": este endpoint es el gancho natural para monitores de uptime, alertas y balanceadores de carga.
+- **🪵 Serilog (logging estructurado)** — bitácora de todo lo que ocurre en la API, en consola y en archivos diarios con formato estructurado. Ante un incidente, el equipo de operaciones trabaja con evidencia, no con suposiciones: saber *qué* pasó, *cuándo* y en *qué* endpoint es el primer paso de cualquier diagnóstico.
+- **🧪 Pruebas de integración (xUnit)** — 11 pruebas que levantan la API en memoria con una base SQLite temporal y validan el CRUD completo, las validaciones y el endpoint de salud. Probar antes de liberar es el mismo criterio que se aplica antes de un pase a producción: validar, no asumir.
+
+Cada decisión de implementación está documentada con su razonamiento en la sección [Decisiones técnicas](#-decisiones-técnicas).
+
 ## 🎯 Sobre el proyecto
 
 API REST construida como parte de mi prueba técnica para el rol de Analista de Operaciones de Sistemas, que gestiona las estadísticas sociales del estilo de *Persona 5* con persistencia en base de datos.
